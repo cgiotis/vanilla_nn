@@ -42,24 +42,24 @@ class simple_nn(object):
 
     def forward_propagation(self, X, log=True):
         # perform full forward propagation
-        self.output_log = {} # memory log for previous step outputs
+        if log:
+            self.output_log = {} # memory log for previous step outputs
+
         A_curr = X
 
         for idx, layer in enumerate(self.architecture):
             layer_idx = idx + 1
-            # print(f"forward layer {layer_idx}")
             A_prev = A_curr
             activation_func = layer["activation"]
-            # print(f"{activation_func = }")
             W_curr = self.params[f"W{layer_idx}"]
             b_curr = self.params[f"b{layer_idx}"]
             A_curr, Z_curr = self.forward_layer(A_prev, W_curr, b_curr, activation_func)
 
-            self.output_log[f"A{idx}"] = A_prev # needed for W backpropagation
-            self.output_log[f"Z{layer_idx}"] = Z_curr # needed for global backpropagation
+            if log:
+                self.output_log[f"A{idx}"] = A_prev # needed for W backpropagation
+                self.output_log[f"Z{layer_idx}"] = Z_curr # needed for global backpropagation
 
-            # the equivalent of y_hat is return; the output of the network
-        # print(A_curr)
+        # the equivalent of y_hat is returned; the output of the network
         return A_curr
 
     def backward_layer(self, A_prev, dA_curr, W_curr, b_curr, Z_curr, activation="relu"):
@@ -119,54 +119,41 @@ class simple_nn(object):
 
     def update_params(self, learning_rate):
         # update trainable parameters
-        # print(self.params)
         for idx, layer in enumerate(self.architecture):
             layer_idx = idx + 1
-            # print(f"update layer {layer_idx}")
             w_update = learning_rate * self.gradients[f"dW{layer_idx}"]
-            # print(w_update)
-            # print(self.params[f"W{layer_idx}"].shape)
             w_params = self.params[f"W{layer_idx}"]
             self.params[f"W{layer_idx}"] -= w_update
             b_update = learning_rate * self.gradients[f"db{layer_idx}"]
             b_params = self.params[f"b{layer_idx}"]
-            # print(f"{b_params = }")
-            # print(f"{b_update = }")
             self.params[f"b{layer_idx}"] -= b_update
-            # print(w_params.shape)
-            # print(b_params.shape)
-            # if layer_idx == 3:
-            #     print(w_params[2,3])
 
-    def train(self, X, Y, epochs, learning_rate):
-        training_accuracy = []
-        training_cost = []
+    def train(self, X, Y, X_test, Y_test, epochs, learning_rate):
+        epoch_snapshots = [0, 999, 1999, 2999, 3999, 4999]
+        # epoch_snapshots = [0, 99, 199, 299, 399, 499]
+        test_accuracy = []
+        test_cost = []
+        prediction_history = {}
 
         for epoch in range(epochs):
             Y_hat = self.forward_propagation(X)
 
-            training_accuracy.append(f.binary_classification_accuracy(Y, Y_hat))
-            training_cost.append(f.binary_cross_entropy(Y, Y_hat))
-
             self.backward_propagation(Y, Y_hat)
             self.update_params(learning_rate)
 
-            print(f"Epoch {epoch+1} of {epochs}: accuracy = {training_accuracy[-1]}")
-            print(f"Epoch {epoch+1} of {epochs}: cost = {training_cost[-1]}")
+            Y_test_hat = self.forward_propagation(X_test, log=False)
+            if epoch in epoch_snapshots:
+                prediction_history[epoch] = Y_test_hat
 
-            # for idx, layer in enumerate(self.architecture):
-            #     layer_idx = idx + 1
-            #     w_params = self.params[f"W{layer_idx}"]
-            #     b_params = self.params[f"b{layer_idx}"]
-            #     print(f"layer {layer_idx}, {w_params.shape = }")
-            #     print(f"{w_params = }")
-            #     print(f"layer {layer_idx}, {b_params.shape = }")
+            test_accuracy.append(f.binary_classification_accuracy(Y_test, Y_test_hat))
+            test_cost.append(f.binary_cross_entropy(Y_test, Y_test_hat))
 
-        return training_accuracy, training_cost, self.history
+            print(f"Epoch {epoch+1} of {epochs}: accuracy = {test_accuracy[-1]}")
+            print(f"Epoch {epoch+1} of {epochs}: cost = {test_cost[-1]}")
+
+        return test_accuracy, test_cost, prediction_history
 
     def predict(self, X):
-        predictions = self.forward_propagation(X)
-        # print(predictions)
+        predictions = self.forward_propagation(X, log=False)
         predictions = np.around(predictions).astype(int)
-        # print(predictions)
         return predictions

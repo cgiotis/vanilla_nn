@@ -11,10 +11,13 @@ def calculate_accuracy(y, predictions):
     print(np.mean(accuracy))
 
 # calculate_accuracy(y, predictions)
-dict = {}
-foo = np.random.randn(4,2)
-dict['foo'] = foo
+# dict = {}
+# foo = np.random.randn(4,2)
+# dict['foo'] = foo
+# print(foo)
+# foo *= 5
+# print(foo)
+# print(dict['foo'])
+
+foo = np.linspace(0, 4999, 6)
 print(foo)
-foo *= 5
-print(foo)
-print(dict['foo'])
